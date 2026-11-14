@@ -19,7 +19,10 @@ body {
     flex-direction: column; 
     align-items: center;
     min-height: 100vh;
-    overflow-x: hidden;
+    min-height: 100dvh;
+    /* `clip` recorta los brillos decorativos SIN convertir el body en un contenedor de scroll
+       (con `hidden` en html + body el scroll se anida y se traba en Android/WebView). */
+    overflow-x: clip;
     position: relative;
 }
 
@@ -483,14 +486,45 @@ textarea { white-space: pre; overflow: auto; }
 }
 
 /* Los brillos decorativos no deben generar scroll horizontal */
-html { overflow-x: hidden; }
 .bg-glow-1, .bg-glow-2 { pointer-events: none; }
+/* Navegadores sin soporte de `overflow: clip` (muy antiguos): se recorta en html, nunca en ambos. */
+@supports not (overflow-x: clip) {
+    body { overflow-x: visible; }
+    html { overflow-x: hidden; }
+}
 
 /* ---------------------------------------------------------------- APK (Capacitor / Android) */
 html.is-native body {
     padding-top: max(28px, env(safe-area-inset-top));
     padding-bottom: max(24px, env(safe-area-inset-bottom));
     -webkit-tap-highlight-color: transparent;
-    overscroll-behavior-y: none;
 }
-html.is-native input[type="file"] { max-width: 100%; }
+
+/* ---------------------------------------------------------------- Scroll táctil
+   Evita que el gesto de deslizar se "atrape" o tiemble en celulares. */
+html {
+    -webkit-text-size-adjust: 100%;
+    touch-action: manipulation;          /* quita el retraso del doble toque; mantiene scroll y zoom */
+    scroll-behavior: auto;
+}
+input[type="file"], .meta-text-input, .audio-input { max-width: 100%; min-width: 0; }
+.code-grid > *, .editor-box { min-width: 0; }
+
+/* Los textareas de salida: un alto razonable para que siempre quede espacio libre
+   fuera de ellos donde deslizar la página, y que el scroll encadene al llegar al borde. */
+textarea {
+    overscroll-behavior: auto;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x pan-y;
+    -webkit-user-select: text;
+}
+@media (max-width: 760px) {
+    textarea { height: min(280px, 36vh); }
+}
+
+/* Pantallas táctiles: sin efectos :hover pegados ni animaciones infinitas (tirones en gama baja). */
+@media (hover: none) {
+    .mode-card:hover, .btn-convert:hover, .btn-download:hover, #drop-zone:hover { transform: none; }
+    #drop-zone .icon, .required-tag { animation: none; }
+    h1 { filter: none; }
+}
