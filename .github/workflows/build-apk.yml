@@ -35,8 +35,8 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      - name: Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Android SDK (ya viene en el runner; solo se aceptan licencias)
+        run: yes | sdkmanager --licenses > /dev/null || true
 
       - name: Instalar dependencias
         run: npm install --no-audit --no-fund
