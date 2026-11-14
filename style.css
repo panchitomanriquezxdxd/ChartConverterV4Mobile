@@ -485,3 +485,12 @@ textarea { white-space: pre; overflow: auto; }
 /* Los brillos decorativos no deben generar scroll horizontal */
 html { overflow-x: hidden; }
 .bg-glow-1, .bg-glow-2 { pointer-events: none; }
+
+/* ---------------------------------------------------------------- APK (Capacitor / Android) */
+html.is-native body {
+    padding-top: max(28px, env(safe-area-inset-top));
+    padding-bottom: max(24px, env(safe-area-inset-bottom));
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: none;
+}
+html.is-native input[type="file"] { max-width: 100%; }

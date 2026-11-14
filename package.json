@@ -1,0 +1,23 @@
+{
+  "name": "chart-converter-v4-mobile",
+  "version": "4.0.0",
+  "private": true,
+  "description": "Chart Converter V4 (Psych / Kade / Codename <-> V Slice) empaquetado como APK de Android con Capacitor.",
+  "scripts": {
+    "build:web": "node scripts/build-web.js",
+    "android:init": "npm run build:web && npx cap add android && node scripts/patch-android.js && npm run android:icons && npx cap sync android",
+    "android:icons": "capacitor-assets generate --android --iconBackgroundColor \"#030508\" --iconBackgroundColorDark \"#030508\"",
+    "android:sync": "npm run build:web && npx cap sync android",
+    "android:apk": "cd android && ./gradlew assembleDebug"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.0.0",
+    "@capacitor/cli": "^7.0.0",
+    "@capacitor/core": "^7.0.0",
+    "@capacitor/filesystem": "^7.0.0",
+    "@capacitor/share": "^7.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5"
+  }
+}

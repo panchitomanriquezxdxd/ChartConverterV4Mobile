@@ -36,6 +36,15 @@ const statusInverse = document.getElementById("status-inverse");
 const metaExtraBox = document.getElementById("meta-extra-box");
 const fnfcBox = document.getElementById("fnfc-box");
 
+// ¿Corre dentro del APK (Capacitor)? En el navegador normal sigue funcionando como antes.
+const IS_NATIVE = !!(window.Capacitor && typeof window.Capacitor.isNativePlatform === "function" && window.Capacitor.isNativePlatform());
+if (IS_NATIVE) {
+    document.documentElement.classList.add("is-native");
+    // En Android, un `accept` con extensiones raras (.fnfc) hace que el selector oculte archivos.
+    // Se quita y el filtrado ya lo hace isAccepted() por extensión.
+    fileInput.removeAttribute("accept");
+}
+
 let selectedFiles = [];
 let currentSongKey = "pack";
 let direction = "forward";        // "forward" (→ V Slice) | "inverse" (V Slice →)
@@ -70,15 +79,19 @@ function resetOutputs() {
 
 function refreshLabels() {
     if (direction === "forward") {
-        dropText.innerHTML = `¡Suelta tus charts de <span>${FORWARD_LABELS[converterMode] || "Psych Engine"}</span> aquí!`;
-        dropHint.textContent = "O haz clic para explorar tus Archivos";
+        dropText.innerHTML = IS_NATIVE
+            ? `Toca aquí para elegir tus charts de <span>${FORWARD_LABELS[converterMode] || "Psych Engine"}</span>`
+            : `¡Suelta tus charts de <span>${FORWARD_LABELS[converterMode] || "Psych Engine"}</span> aquí!`;
+        dropHint.textContent = IS_NATIVE ? "Se abrirá el explorador de archivos de tu celular" : "O haz clic para explorar tus Archivos";
         convertBtn.textContent = "✨ PROCESAR ARCHIVOS ✨";
         chartTitle.textContent = "chart.json";
         metaTitle.textContent = "metadata.json";
         chartArea.placeholder = "Las notas convertidas aparecerán aquí...";
         metaArea.placeholder = "Los metadatos aparecerán aquí...";
     } else {
-        dropText.innerHTML = `¡Suelta tu <span>chart + metadata</span> de V Slice (o un <span>.fnfc</span>) aquí!`;
+        dropText.innerHTML = IS_NATIVE
+            ? `Toca aquí para elegir tu <span>chart + metadata</span> de V Slice (o un <span>.fnfc</span>)`
+            : `¡Suelta tu <span>chart + metadata</span> de V Slice (o un <span>.fnfc</span>) aquí!`;
         dropHint.textContent = `Destino: ${INVERSE_LABELS[inverseMode]} · acepta .json, .fnfc y .zip`;
         convertBtn.textContent = `🔄 CONVERTIR A ${INVERSE_LABELS[inverseMode].toUpperCase()}`;
         chartTitle.textContent = "chart convertido";
@@ -203,7 +216,41 @@ function copyToClipboard(areaId, button) {
     navigator.clipboard.writeText(textarea.value).then(done).catch(fallback);
 }
 
-function downloadBlob(blob, filename) {
+function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result).split(",")[1] || "");
+        reader.onerror = () => reject(reader.error || new Error("No se pudo leer el archivo generado."));
+        reader.readAsDataURL(blob);
+    });
+}
+
+// Android WebView ignora <a download> con blobs: se escribe el archivo en la caché de la app
+// y se abre el menú "Compartir" de Android, desde donde se guarda en Archivos/Descargas, Drive, WhatsApp, etc.
+async function saveNative(blob, filename) {
+    const plugins = window.Capacitor.Plugins || {};
+    const { Filesystem, Share } = plugins;
+    if (!Filesystem || !Share) throw new Error("Los plugins nativos de archivos no están disponibles.");
+    const data = await blobToBase64(blob);
+    const written = await Filesystem.writeFile({ path: filename, data, directory: "CACHE", recursive: true });
+    try {
+        await Share.share({ title: filename, dialogTitle: `Guardar / compartir ${filename}`, url: written.uri });
+    } catch (err) {
+        // Cerrar el menú sin elegir nada no es un error.
+        if (!/cancel/i.test(String(err && err.message || err))) throw err;
+    }
+}
+
+async function downloadBlob(blob, filename) {
+    if (IS_NATIVE) {
+        try {
+            await saveNative(blob, filename);
+        } catch (err) {
+            console.error(err);
+            alert("❌ No se pudo guardar el archivo: " + (err && err.message ? err.message : err));
+        }
+        return;
+    }
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -216,7 +263,7 @@ function downloadBlob(blob, filename) {
 
 function requireJSZip() {
     if (typeof JSZip === "undefined") {
-        alert("❌ No se pudo cargar JSZip (¿sin conexión a internet?). Recarga la página con conexión para generar ZIP/.fnfc.");
+        alert("❌ No se pudo cargar JSZip (lib/jszip.min.js). Recarga la app para generar ZIP/.fnfc.");
         return false;
     }
     return true;

@@ -1,0 +1,9 @@
+{
+  "appId": "com.gamercb.chartconverter",
+  "appName": "Chart Converter V4",
+  "webDir": "www",
+  "backgroundColor": "#030508",
+  "android": {
+    "allowMixedContent": false
+  }
+}
